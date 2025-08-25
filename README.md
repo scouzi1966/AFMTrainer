@@ -287,7 +287,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: Report bugs and request features via GitHub Issues
 - **Discussions**: Join the community discussions for help and tips
-- **Documentation**: Check the [Wiki](wiki-url) for additional guides
+
 
 ---
 
