@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "afm-trainer"
+version = "1.0.0"
+description = "GUI wrapper for Apple Foundation Models Adapter Training Toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "tqdm",
+    "sentencepiece", 
+    "notebook",
+    "pydantic",
+    "coremltools==8.3.0",
+    "torch>=2.6",
+    "tamm~=0.1.0",
+    "matplotlib>=3.7.0",
+    "wandb>=0.16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "isort",
+    "flake8",
+]
+
+[project.scripts]
+afm-trainer = "afm_trainer.afm_trainer_gui:main"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
