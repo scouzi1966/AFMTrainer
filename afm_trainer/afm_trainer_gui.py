@@ -13,6 +13,13 @@ from typing import Optional
 import logging
 import datetime
 
+# Import sv-ttk for modern theming
+try:
+    import sv_ttk
+    SV_TTK_AVAILABLE = True
+except ImportError:
+    SV_TTK_AVAILABLE = False
+
 from .config_manager import ConfigManager, TrainingConfig
 from .training_controller import TrainingController
 from .export_handler import ExportHandler
@@ -28,6 +35,9 @@ class AFMTrainerGUI:
         self.root = root
         self.root.title("AFM Trainer - Apple Foundation Models Adapter Training")
         self.root.geometry("900x700")
+        
+        # Apply modern theme
+        self.apply_theme()
         
         # Initialize components
         self.config_manager = ConfigManager()
@@ -63,6 +73,82 @@ class AFMTrainerGUI:
         self.root.bind('<Control-q>', lambda e: self.quit_application())
         self.root.bind('<Command-q>', lambda e: self.quit_application())  # macOS
         
+    def apply_theme(self):
+        """Apply modern theme to the GUI."""
+        if SV_TTK_AVAILABLE:
+            # Apply Sun Valley theme (modern forest-like appearance)
+            # Choose dark theme for a more modern look
+            sv_ttk.set_theme("dark")
+            self.logger = logging.getLogger(__name__)
+            self.logger.info("Applied Sun Valley dark theme")
+        else:
+            # Fallback to enhanced ttk styling
+            style = ttk.Style()
+            
+            # Try to use a modern built-in theme
+            available_themes = style.theme_names()
+            if 'vista' in available_themes:
+                style.theme_use('vista')
+            elif 'xpnative' in available_themes:
+                style.theme_use('xpnative')
+            elif 'clam' in available_themes:
+                style.theme_use('clam')
+            else:
+                style.theme_use('default')
+            
+            # Custom styling for better appearance
+            style.configure("TFrame", background="#f0f0f0")
+            style.configure("TLabel", background="#f0f0f0", foreground="#333333")
+            style.configure("TLabelFrame", background="#f0f0f0", foreground="#333333")
+            style.configure("TLabelFrame.Label", background="#f0f0f0", foreground="#2e7d32", font=("Arial", 9, "bold"))
+            
+            # Button styling
+            style.configure("TButton", 
+                          background="#e0e0e0", 
+                          foreground="#333333",
+                          font=("Arial", 9))
+            style.map("TButton",
+                     background=[('active', '#d0d0d0'), ('pressed', '#c0c0c0')])
+            
+            # Accent button for primary actions
+            style.configure("Accent.TButton", 
+                          background="#2e7d32", 
+                          foreground="white",
+                          font=("Arial", 9, "bold"))
+            style.map("Accent.TButton",
+                     background=[('active', '#1b5e20'), ('pressed', '#0d3f14')])
+            
+            # Entry styling
+            style.configure("TEntry",
+                          fieldbackground="white",
+                          bordercolor="#cccccc",
+                          focuscolor="#2e7d32")
+            
+            # Notebook styling
+            style.configure("TNotebook", background="#f0f0f0")
+            style.configure("TNotebook.Tab", 
+                          background="#e0e0e0",
+                          foreground="#333333",
+                          padding=[12, 8])
+            style.map("TNotebook.Tab",
+                     background=[('selected', '#2e7d32'), ('active', '#d0d0d0')],
+                     foreground=[('selected', 'white')])
+            
+            # Progressbar styling
+            style.configure("TProgressbar",
+                          background="#2e7d32",
+                          troughcolor="#e0e0e0")
+            
+            if hasattr(self, 'logger'):
+                self.logger.info("Applied custom enhanced theme (sv-ttk not available)")
+                
+    def change_theme(self, event=None):
+        """Change between light and dark themes."""
+        if SV_TTK_AVAILABLE:
+            theme = self.theme_var.get()
+            sv_ttk.set_theme(theme)
+            self.log_message(f"Theme changed to: {theme.capitalize()}", "INFO")
+        
     def setup_ui(self):
         """Setup the main user interface."""
         # Create main frame
@@ -94,18 +180,52 @@ class AFMTrainerGUI:
     def create_header(self, parent):
         """Create the header section."""
         header_frame = ttk.Frame(parent)
-        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
         header_frame.columnconfigure(1, weight=1)
         
-        # Title
-        title_label = ttk.Label(header_frame, text="AFM Trainer", 
-                               font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2, sticky=tk.W)
+        # Create a styled header with icon
+        header_container = ttk.Frame(header_frame, style="Header.TFrame")
+        header_container.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        subtitle_label = ttk.Label(header_frame, 
-                                  text="Apple Foundation Models Adapter Training Toolkit GUI",
-                                  font=("Arial", 10))
-        subtitle_label.grid(row=1, column=0, columnspan=2, sticky=tk.W)
+        # Title with icon
+        title_frame = ttk.Frame(header_container)
+        title_frame.pack(anchor="w", pady=5)
+        
+        # App icon/emoji
+        icon_label = ttk.Label(title_frame, text="🧠", font=("Arial", 20))
+        icon_label.pack(side="left", padx=(0, 10))
+        
+        title_label = ttk.Label(title_frame, text="AFM Trainer", 
+                               font=("Arial", 18, "bold"))
+        title_label.pack(side="left")
+        
+        # Subtitle with better styling
+        subtitle_label = ttk.Label(header_container, 
+                                  text="🍎 Apple Foundation Models Adapter Training Toolkit GUI",
+                                  font=("Arial", 11))
+        subtitle_label.pack(anchor="w", pady=(0, 5))
+        
+        # Version info and theme toggle
+        info_frame = ttk.Frame(header_container)
+        info_frame.pack(anchor="w", fill="x")
+        
+        version_label = ttk.Label(info_frame,
+                                 text="v0.1.0 • Modern GUI for LoRA Adapter Training",
+                                 font=("Arial", 9))
+        version_label.pack(side="left")
+        
+        # Theme toggle button (if sv-ttk is available)
+        if SV_TTK_AVAILABLE:
+            theme_frame = ttk.Frame(info_frame)
+            theme_frame.pack(side="right")
+            
+            ttk.Label(theme_frame, text="Theme:", font=("Arial", 9)).pack(side="left", padx=(10, 5))
+            
+            self.theme_var = tk.StringVar(value="dark")
+            theme_combo = ttk.Combobox(theme_frame, textvariable=self.theme_var,
+                                     values=["dark", "light"], width=8, state="readonly")
+            theme_combo.pack(side="left")
+            theme_combo.bind("<<ComboboxSelected>>", self.change_theme)
         
     def create_setup_tab(self):
         """Create the setup and configuration tab."""
@@ -113,12 +233,12 @@ class AFMTrainerGUI:
         self.notebook.add(setup_frame, text="Setup")
         
         # Toolkit directory selection
-        toolkit_group = ttk.LabelFrame(setup_frame, text="Toolkit Configuration", padding="10")
+        toolkit_group = ttk.LabelFrame(setup_frame, text="🔧 Toolkit Configuration", padding="10")
         toolkit_group.pack(fill="x", padx=10, pady=5)
         
-        ttk.Label(toolkit_group, text="Toolkit Directory:").pack(anchor="w")
+        ttk.Label(toolkit_group, text="Toolkit Directory:", font=("Arial", 9, "bold")).pack(anchor="w")
         ttk.Label(toolkit_group, text="⚠️ Requires Apple Developer Program entitlements and must be downloaded directly from Apple", 
-                 foreground="red", font=("Arial", 8)).pack(anchor="w", pady=(0, 5))
+                 font=("Arial", 8)).pack(anchor="w", pady=(0, 5))
         toolkit_dir_frame = ttk.Frame(toolkit_group)
         toolkit_dir_frame.pack(fill="x", pady=5)
         
@@ -129,11 +249,11 @@ class AFMTrainerGUI:
                   command=self.browse_toolkit_dir).pack(side="right", padx=(5, 0))
         
         # Dataset configuration
-        dataset_group = ttk.LabelFrame(setup_frame, text="Dataset Configuration", padding="10")
+        dataset_group = ttk.LabelFrame(setup_frame, text="📊 Dataset Configuration", padding="10")
         dataset_group.pack(fill="x", padx=10, pady=5)
         
         # Training data
-        ttk.Label(dataset_group, text="Training Data (JSONL):").pack(anchor="w")
+        ttk.Label(dataset_group, text="Training Data (JSONL):", font=("Arial", 9, "bold")).pack(anchor="w")
         train_frame = ttk.Frame(dataset_group)
         train_frame.pack(fill="x", pady=2)
         
@@ -146,7 +266,7 @@ class AFMTrainerGUI:
                                                   [("JSONL files", "*.jsonl")])).pack(side="right", padx=(5, 0))
         
         # Evaluation data
-        ttk.Label(dataset_group, text="Evaluation Data (JSONL, optional):").pack(anchor="w", pady=(10, 0))
+        ttk.Label(dataset_group, text="Evaluation Data (JSONL, optional):", font=("Arial", 9, "bold")).pack(anchor="w", pady=(10, 0))
         eval_frame = ttk.Frame(dataset_group)
         eval_frame.pack(fill="x", pady=2)
         
@@ -159,10 +279,10 @@ class AFMTrainerGUI:
                                                   [("JSONL files", "*.jsonl")])).pack(side="right", padx=(5, 0))
         
         # Output directory
-        output_group = ttk.LabelFrame(setup_frame, text="Output Configuration", padding="10")
+        output_group = ttk.LabelFrame(setup_frame, text="📁 Output Configuration", padding="10")
         output_group.pack(fill="x", padx=10, pady=5)
         
-        ttk.Label(output_group, text="Output Directory:").pack(anchor="w")
+        ttk.Label(output_group, text="Output Directory:", font=("Arial", 9, "bold")).pack(anchor="w")
         output_frame = ttk.Frame(output_group)
         output_frame.pack(fill="x", pady=5)
         
@@ -194,7 +314,7 @@ class AFMTrainerGUI:
         scrollbar.pack(side="right", fill="y")
         
         # Basic training parameters
-        basic_group = ttk.LabelFrame(scrollable_frame, text="Basic Parameters", padding="10")
+        basic_group = ttk.LabelFrame(scrollable_frame, text="⚙️ Basic Parameters", padding="10")
         basic_group.pack(fill="x", padx=10, pady=5)
         
         # Epochs
@@ -222,7 +342,7 @@ class AFMTrainerGUI:
         ttk.Label(batch_frame, text="Number of samples per training batch").pack(side="left", padx=(10, 0))
         
         # Advanced parameters
-        advanced_group = ttk.LabelFrame(scrollable_frame, text="Advanced Parameters", padding="10")
+        advanced_group = ttk.LabelFrame(scrollable_frame, text="🔬 Advanced Parameters", padding="10")
         advanced_group.pack(fill="x", padx=10, pady=5)
         
         # Warmup epochs
@@ -363,27 +483,27 @@ class AFMTrainerGUI:
         button_frame.pack(side="right")
         
         # Validate button
-        self.validate_btn = ttk.Button(button_frame, text="Validate Setup", 
+        self.validate_btn = ttk.Button(button_frame, text="✓ Validate Setup", 
                                       command=self.validate_setup)
         self.validate_btn.pack(side="left", padx=(0, 5))
         
         # Start training button
-        self.start_btn = ttk.Button(button_frame, text="Start Training", 
+        self.start_btn = ttk.Button(button_frame, text="🚀 Start Training", 
                                    command=self.start_training, style="Accent.TButton")
         self.start_btn.pack(side="left", padx=(0, 5))
         
         # Stop training button
-        self.stop_btn = ttk.Button(button_frame, text="Stop Training", 
+        self.stop_btn = ttk.Button(button_frame, text="⏹ Stop Training", 
                                   command=self.stop_training, state="disabled")
         self.stop_btn.pack(side="left", padx=(0, 5))
         
         # Export button
-        self.export_btn = ttk.Button(button_frame, text="Export Adapter", 
+        self.export_btn = ttk.Button(button_frame, text="📦 Export Adapter", 
                                     command=self.export_adapter, state="disabled")
         self.export_btn.pack(side="left", padx=(0, 5))
         
         # Quit button
-        self.quit_btn = ttk.Button(button_frame, text="Quit (Ctrl+Q)", 
+        self.quit_btn = ttk.Button(button_frame, text="🚪 Quit (Ctrl+Q)", 
                                   command=self.quit_application)
         self.quit_btn.pack(side="left")
         
@@ -1049,13 +1169,7 @@ def main():
     
     root = tk.Tk()
     
-    # Configure ttk style
-    style = ttk.Style()
-    style.theme_use('clam')  # Use a modern theme
-    
-    # Additional style configurations
-    style.configure("Accent.TButton", foreground="white", background="#007ACC")
-    
+    # The theme will be applied by the AFMTrainerGUI class
     app = AFMTrainerGUI(root)
     
     try:
