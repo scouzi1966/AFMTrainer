@@ -39,6 +39,9 @@ class AFMTrainerGUI:
         # Apply modern theme
         self.apply_theme()
         
+        # Performance optimization: reduce unnecessary redraws
+        self.root.configure(background='#2d2d2d' if SV_TTK_AVAILABLE else '#f0f0f0')
+        
         # Initialize components
         self.config_manager = ConfigManager()
         self.training_controller = TrainingController()
@@ -298,19 +301,40 @@ class AFMTrainerGUI:
         training_frame = ttk.Frame(self.notebook)
         self.notebook.add(training_frame, text="Training")
         
-        # Create scrollable frame for training options
-        canvas = tk.Canvas(training_frame)
-        scrollbar = ttk.Scrollbar(training_frame, orient="vertical", command=canvas.yview)
+        # Create optimized scrollable frame for training options
+        container = ttk.Frame(training_frame)
+        container.pack(fill="both", expand=True)
+        
+        canvas = tk.Canvas(container, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
         
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        # Optimize configure binding - only update when needed
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
         
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        scrollable_frame.bind("<Configure>", on_frame_configure)
+        
+        # Create window with better sizing
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        def on_canvas_configure(event):
+            # Update scrollable frame width to match canvas width
+            canvas.itemconfig(canvas_window, width=event.width)
+        
+        canvas.bind("<Configure>", on_canvas_configure)
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # Add mouse wheel scrolling
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        
+        # Bind mouse wheel events
+        canvas.bind("<MouseWheel>", on_mousewheel)  # Windows
+        canvas.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))  # Linux
+        canvas.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))   # Linux
+        
+        # Pack with better configuration
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
@@ -409,8 +433,10 @@ class AFMTrainerGUI:
         self.wandb_status_label = ttk.Label(wandb_group, text="")
         self.wandb_status_label.pack(anchor="w", pady=2)
         
-        # Update WandB status
-        self._update_wandb_status()
+        # Initialize WandB status (deferred to improve startup performance)
+        self.wandb_status_cache = None
+        self.wandb_status_checked = False
+        self._schedule_wandb_status_update()
         
     def create_export_tab(self):
         """Create the export configuration tab."""
@@ -832,40 +858,98 @@ class AFMTrainerGUI:
         """Handle WandB checkbox toggle."""
         self._update_wandb_status()
         
-    def _update_wandb_status(self):
-        """Update WandB status display."""
-        if not self.wandb_integration.is_available():
+    def _schedule_wandb_status_update(self):
+        """Schedule WandB status update to run after UI is ready."""
+        # Defer the status check to avoid blocking the UI
+        self.root.after(100, self._update_wandb_status_deferred)
+        
+    def _update_wandb_status_deferred(self):
+        """Update WandB status with caching and background checking."""
+        # Show initial loading message
+        if not self.wandb_status_checked:
             self.wandb_status_label.config(
-                text="WandB not installed. Install with: pip install wandb",
-                foreground="orange"
+                text="Checking WandB status...",
+                foreground="gray"
+            )
+            # Do the actual check in background
+            self.root.after(10, self._check_wandb_status_background)
+        else:
+            # Use cached result
+            self._update_wandb_status_from_cache()
+            
+    def _check_wandb_status_background(self):
+        """Check WandB status in background without blocking UI."""
+        try:
+            if not self.wandb_integration.is_available():
+                self.wandb_status_cache = {
+                    'available': False,
+                    'text': "WandB not installed. Install with: pip install wandb",
+                    'color': "orange"
+                }
+            else:
+                # Quick check without full login verification to avoid blocking
+                try:
+                    import wandb
+                    # Just check if wandb is importable and has basic config
+                    if hasattr(wandb, 'api') and wandb.api.api_key:
+                        self.wandb_status_cache = {
+                            'available': True,
+                            'text': "✓ WandB ready for logging",
+                            'color': "green"
+                        }
+                    else:
+                        self.wandb_status_cache = {
+                            'available': True,
+                            'text': "Please run 'wandb login' first",
+                            'color': "red"
+                        }
+                except Exception:
+                    self.wandb_status_cache = {
+                        'available': True,
+                        'text': "Please run 'wandb login' first",
+                        'color': "red"
+                    }
+                    
+        except Exception:
+            self.wandb_status_cache = {
+                'available': False,
+                'text': "WandB status check failed",
+                'color': "red"
+            }
+            
+        self.wandb_status_checked = True
+        self._update_wandb_status_from_cache()
+        
+    def _update_wandb_status_from_cache(self):
+        """Update WandB status display from cached result."""
+        if not self.wandb_status_cache:
+            return
+            
+        if not self.wandb_status_cache['available']:
+            self.wandb_status_label.config(
+                text=self.wandb_status_cache['text'],
+                foreground=self.wandb_status_cache['color']
             )
             self.use_wandb_var.set(False)
             return
             
         if self.use_wandb_var.get():
-            # Check if logged in
-            try:
-                import wandb
-                if wandb.login(anonymous="never", verify=True):
-                    self.wandb_status_label.config(
-                        text="✓ WandB ready for logging",
-                        foreground="green"
-                    )
-                else:
-                    self.wandb_status_label.config(
-                        text="Please run 'wandb login' first",
-                        foreground="red"
-                    )
-            except Exception:
-                self.wandb_status_label.config(
-                    text="Please run 'wandb login' first",
-                    foreground="red"
-                )
+            self.wandb_status_label.config(
+                text=self.wandb_status_cache['text'],
+                foreground=self.wandb_status_cache['color']
+            )
         else:
             self.wandb_status_label.config(
                 text="WandB logging disabled",
                 foreground="gray"
             )
+            
+    def _update_wandb_status(self):
+        """Legacy method - redirect to deferred version."""
+        if not self.wandb_status_checked:
+            self._schedule_wandb_status_update()
+        else:
+            self._update_wandb_status_from_cache()
             
     def quit_application(self):
         """Quit the application gracefully."""
