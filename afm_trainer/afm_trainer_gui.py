@@ -237,8 +237,9 @@ class AFMTrainerGUI:
         toolkit_group.pack(fill="x", padx=10, pady=5)
         
         ttk.Label(toolkit_group, text="Toolkit Directory:", font=("Arial", 9, "bold")).pack(anchor="w")
-        ttk.Label(toolkit_group, text="⚠️ Requires Apple Developer Program entitlements and must be downloaded directly from Apple", 
-                 font=("Arial", 8)).pack(anchor="w", pady=(0, 5))
+        warning_label = ttk.Label(toolkit_group, text="⚠️ Requires Apple Developer Program entitlements and must be downloaded directly from Apple", 
+                                 font=("Arial", 10, "bold"), foreground="red")
+        warning_label.pack(anchor="w", pady=(0, 8))
         toolkit_dir_frame = ttk.Frame(toolkit_group)
         toolkit_dir_frame.pack(fill="x", pady=5)
         
