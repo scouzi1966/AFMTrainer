@@ -385,13 +385,40 @@ class AFMTrainerGUI:
         ttk.Checkbutton(advanced_group, text="Compile Model", 
                        variable=self.compile_model_var).pack(anchor="w", pady=2)
         
+        # Draft model options
+        draft_group = ttk.LabelFrame(scrollable_frame, text="🚀 Draft Model (Optional)", padding="10")
+        draft_group.pack(fill="x", padx=10, pady=5)
+        
+        self.train_draft_var = tk.BooleanVar()
+        ttk.Checkbutton(draft_group, text="Train Draft Model for Speculative Decoding", 
+                       variable=self.train_draft_var).pack(anchor="w", pady=2)
+        
+        ttk.Label(draft_group, text="Improves inference speed but increases training time").pack(anchor="w", pady=2)
+        
+        # WandB integration
+        wandb_group = ttk.LabelFrame(scrollable_frame, text="📈 WandB Integration (Optional)", padding="10")
+        wandb_group.pack(fill="x", padx=10, pady=5)
+        
+        self.use_wandb_var = tk.BooleanVar()
+        wandb_check = ttk.Checkbutton(wandb_group, text="Enable WandB Logging", 
+                                     variable=self.use_wandb_var,
+                                     command=self._on_wandb_toggle)
+        wandb_check.pack(anchor="w", pady=2)
+        
+        # WandB status
+        self.wandb_status_label = ttk.Label(wandb_group, text="")
+        self.wandb_status_label.pack(anchor="w", pady=2)
+        
+        # Update WandB status
+        self._update_wandb_status()
+        
     def create_export_tab(self):
         """Create the export configuration tab."""
         export_frame = ttk.Frame(self.notebook)
         self.notebook.add(export_frame, text="Export")
         
         # Adapter metadata
-        metadata_group = ttk.LabelFrame(export_frame, text="Adapter Metadata", padding="10")
+        metadata_group = ttk.LabelFrame(export_frame, text="📦 Adapter Metadata", padding="10")
         metadata_group.pack(fill="x", padx=10, pady=5)
         
         # Adapter name
@@ -421,33 +448,6 @@ class AFMTrainerGUI:
         ttk.Label(license_frame, text="License:", width=15).pack(side="left")
         self.license_var = tk.StringVar()
         ttk.Entry(license_frame, textvariable=self.license_var).pack(side="left", fill="x", expand=True, padx=(5, 0))
-        
-        # Draft model options
-        draft_group = ttk.LabelFrame(export_frame, text="Draft Model (Optional)", padding="10")
-        draft_group.pack(fill="x", padx=10, pady=5)
-        
-        self.train_draft_var = tk.BooleanVar()
-        ttk.Checkbutton(draft_group, text="Train Draft Model for Speculative Decoding", 
-                       variable=self.train_draft_var).pack(anchor="w", pady=2)
-        
-        ttk.Label(draft_group, text="Improves inference speed but increases training time").pack(anchor="w", pady=2)
-        
-        # WandB integration
-        wandb_group = ttk.LabelFrame(export_frame, text="WandB Integration (Optional)", padding="10")
-        wandb_group.pack(fill="x", padx=10, pady=5)
-        
-        self.use_wandb_var = tk.BooleanVar()
-        wandb_check = ttk.Checkbutton(wandb_group, text="Enable WandB Logging", 
-                                     variable=self.use_wandb_var,
-                                     command=self._on_wandb_toggle)
-        wandb_check.pack(anchor="w", pady=2)
-        
-        # WandB status
-        self.wandb_status_label = ttk.Label(wandb_group, text="")
-        self.wandb_status_label.pack(anchor="w", pady=2)
-        
-        # Update WandB status
-        self._update_wandb_status()
         
     def create_monitor_tab(self):
         """Create the monitoring and logs tab."""
