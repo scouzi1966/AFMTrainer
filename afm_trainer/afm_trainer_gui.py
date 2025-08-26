@@ -24,7 +24,8 @@ from .config_manager import ConfigManager, TrainingConfig
 from .training_controller import TrainingController
 from .export_handler import ExportHandler
 from .file_manager import FileManager
-from .wandb_integration import WandBIntegration
+# Defer WandB import to avoid 2+ second startup penalty
+# from .wandb_integration import WandBIntegration
 from .error_handler import get_error_handler, setup_global_error_handling
 
 
@@ -47,7 +48,7 @@ class AFMTrainerGUI:
         self.training_controller = TrainingController()
         self.export_handler = ExportHandler()
         self.file_manager = FileManager()
-        self.wandb_integration = WandBIntegration()
+        self.wandb_integration = None  # Lazy load when needed
         self.error_handler = get_error_handler()
         
         # Set up error handling callback
@@ -78,72 +79,113 @@ class AFMTrainerGUI:
         
     def apply_theme(self):
         """Apply modern theme to the GUI."""
-        if SV_TTK_AVAILABLE:
+        # Check for performance mode environment variable
+        performance_mode = os.getenv('AFM_TRAINER_PERFORMANCE_MODE', '').lower() == 'true'
+        
+        if SV_TTK_AVAILABLE and not performance_mode:
             # Apply Sun Valley theme (modern forest-like appearance)
             # Choose dark theme for a more modern look
             sv_ttk.set_theme("dark")
-            self.logger = logging.getLogger(__name__)
-            self.logger.info("Applied Sun Valley dark theme")
+            # Defer logging to avoid blocking
+            if not hasattr(self, '_theme_logged'):
+                self.root.after_idle(self._log_theme_applied)
+                self._theme_logged = True
         else:
-            # Fallback to enhanced ttk styling
+            # High-performance fallback theme
             style = ttk.Style()
             
-            # Try to use a modern built-in theme
+            # Use the fastest available theme
             available_themes = style.theme_names()
-            if 'vista' in available_themes:
-                style.theme_use('vista')
-            elif 'xpnative' in available_themes:
-                style.theme_use('xpnative')
-            elif 'clam' in available_themes:
-                style.theme_use('clam')
+            if performance_mode:
+                # Use fastest theme for performance mode
+                if 'clam' in available_themes:
+                    style.theme_use('clam')
+                else:
+                    style.theme_use('default')
+                
+                # Minimal styling for speed
+                style.configure("TNotebook.Tab", padding=[8, 4])
+                style.configure("Accent.TButton", foreground="white", background="#0066cc")
+                
+                if hasattr(self, 'logger'):
+                    self.root.after_idle(lambda: self.logger.info("Applied high-performance theme"))
             else:
-                style.theme_use('default')
-            
-            # Custom styling for better appearance
-            style.configure("TFrame", background="#f0f0f0")
-            style.configure("TLabel", background="#f0f0f0", foreground="#333333")
-            style.configure("TLabelFrame", background="#f0f0f0", foreground="#333333")
-            style.configure("TLabelFrame.Label", background="#f0f0f0", foreground="#2e7d32", font=("Arial", 9, "bold"))
-            
-            # Button styling
-            style.configure("TButton", 
-                          background="#e0e0e0", 
-                          foreground="#333333",
-                          font=("Arial", 9))
-            style.map("TButton",
-                     background=[('active', '#d0d0d0'), ('pressed', '#c0c0c0')])
-            
-            # Accent button for primary actions
-            style.configure("Accent.TButton", 
-                          background="#2e7d32", 
-                          foreground="white",
-                          font=("Arial", 9, "bold"))
-            style.map("Accent.TButton",
-                     background=[('active', '#1b5e20'), ('pressed', '#0d3f14')])
-            
-            # Entry styling
-            style.configure("TEntry",
-                          fieldbackground="white",
-                          bordercolor="#cccccc",
-                          focuscolor="#2e7d32")
-            
-            # Notebook styling
-            style.configure("TNotebook", background="#f0f0f0")
-            style.configure("TNotebook.Tab", 
-                          background="#e0e0e0",
-                          foreground="#333333",
-                          padding=[12, 8])
-            style.map("TNotebook.Tab",
-                     background=[('selected', '#2e7d32'), ('active', '#d0d0d0')],
-                     foreground=[('selected', 'white')])
-            
-            # Progressbar styling
-            style.configure("TProgressbar",
-                          background="#2e7d32",
-                          troughcolor="#e0e0e0")
+                # Enhanced theme without sv-ttk
+                if 'vista' in available_themes:
+                    style.theme_use('vista')
+                elif 'aqua' in available_themes:  # macOS
+                    style.theme_use('aqua') 
+                elif 'clam' in available_themes:
+                    style.theme_use('clam')
+                else:
+                    style.theme_use('default')
+                
+                # Enhanced styling for better appearance
+                style.configure("TFrame", background="#f8f8f8")
+                style.configure("TLabel", background="#f8f8f8", foreground="#333333")
+                style.configure("TLabelFrame", background="#f8f8f8", foreground="#333333")
+                style.configure("TLabelFrame.Label", background="#f8f8f8", foreground="#2e7d32", font=("Arial", 9, "bold"))
+                
+                # Button styling
+                style.configure("TButton", 
+                              background="#e8e8e8", 
+                              foreground="#333333",
+                              font=("Arial", 9))
+                style.map("TButton",
+                         background=[('active', '#d8d8d8'), ('pressed', '#c8c8c8')])
+                
+                # Accent button for primary actions
+                style.configure("Accent.TButton", 
+                              background="#2e7d32", 
+                              foreground="white",
+                              font=("Arial", 9, "bold"))
+                style.map("Accent.TButton",
+                         background=[('active', '#1b5e20'), ('pressed', '#0d3f14')])
+                
+                # Entry styling
+                style.configure("TEntry",
+                              fieldbackground="white",
+                              bordercolor="#cccccc",
+                              focuscolor="#2e7d32")
+                
+                # Notebook styling
+                style.configure("TNotebook", background="#f8f8f8")
+                style.configure("TNotebook.Tab", 
+                              background="#e8e8e8",
+                              foreground="#333333",
+                              padding=[10, 6])
+                style.map("TNotebook.Tab",
+                         background=[('selected', '#2e7d32'), ('active', '#d8d8d8')],
+                         foreground=[('selected', 'white')])
+                
+                # Progressbar styling
+                style.configure("TProgressbar",
+                              background="#2e7d32",
+                              troughcolor="#e8e8e8")
             
             if hasattr(self, 'logger'):
-                self.logger.info("Applied custom enhanced theme (sv-ttk not available)")
+                self.root.after_idle(lambda: self.logger.info("Applied custom enhanced theme (sv-ttk not available)"))
+                
+    def _log_theme_applied(self):
+        """Log theme application after GUI is ready."""
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Applied Sun Valley dark theme")
+        
+    def _get_wandb_integration(self):
+        """Lazy load WandB integration to avoid startup penalty."""
+        if self.wandb_integration is None:
+            try:
+                from .wandb_integration import WandBIntegration
+                self.wandb_integration = WandBIntegration()
+            except ImportError as e:
+                print(f"Warning: Could not import WandB integration: {e}")
+                # Create a dummy WandB integration
+                self.wandb_integration = type('DummyWandB', (), {
+                    'is_available': lambda: False,
+                    'finish': lambda: None
+                })()
+        return self.wandb_integration
+        
                 
     def change_theme(self, event=None):
         """Change between light and dark themes."""
@@ -151,6 +193,7 @@ class AFMTrainerGUI:
             theme = self.theme_var.get()
             sv_ttk.set_theme(theme)
             self.log_message(f"Theme changed to: {theme.capitalize()}", "INFO")
+            
         
     def setup_ui(self):
         """Setup the main user interface."""
@@ -167,11 +210,14 @@ class AFMTrainerGUI:
         # Header
         self.create_header(main_frame)
         
-        # Create notebook for tabs
+        # Create notebook for tabs with optimized performance
         self.notebook = ttk.Notebook(main_frame)
         self.notebook.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
         
-        # Create tabs
+        # Optimize tab switching performance
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+        
+        # Create tabs (simplified approach for stability)
         self.create_setup_tab()
         self.create_training_tab()
         self.create_export_tab()
@@ -217,8 +263,9 @@ class AFMTrainerGUI:
                                  font=("Arial", 9))
         version_label.pack(side="left")
         
-        # Theme toggle button (if sv-ttk is available)
-        if SV_TTK_AVAILABLE:
+        # Theme toggle button (if sv-ttk is available and not in performance mode)
+        performance_mode = os.getenv('AFM_TRAINER_PERFORMANCE_MODE', '').lower() == 'true'
+        if SV_TTK_AVAILABLE and not performance_mode:
             theme_frame = ttk.Frame(info_frame)
             theme_frame.pack(side="right")
             
@@ -229,6 +276,17 @@ class AFMTrainerGUI:
                                      values=["dark", "light"], width=8, state="readonly")
             theme_combo.pack(side="left")
             theme_combo.bind("<<ComboboxSelected>>", self.change_theme)
+        elif performance_mode:
+            # Show performance mode indicator
+            perf_frame = ttk.Frame(info_frame)
+            perf_frame.pack(side="right")
+            ttk.Label(perf_frame, text="⚡ Performance Mode", font=("Arial", 9, "bold"), 
+                     foreground="green").pack(side="left", padx=(10, 0))
+    
+    def _on_tab_changed(self, event):
+        """Optimized tab change handler using update_idletasks for better performance."""
+        # Use update_idletasks instead of update for much faster tab switching
+        self.root.update_idletasks()
         
     def create_setup_tab(self):
         """Create the setup and configuration tab."""
@@ -391,6 +449,22 @@ class AFMTrainerGUI:
         self.weight_decay_var = tk.StringVar(value="1e-2")
         ttk.Entry(weight_decay_frame, textvariable=self.weight_decay_var, width=10).pack(side="left")
         
+        # Gradient clipping norm
+        clip_grad_frame = ttk.Frame(advanced_group)
+        clip_grad_frame.pack(fill="x", pady=2)
+        ttk.Label(clip_grad_frame, text="Clip Grad Norm:", width=20).pack(side="left")
+        self.clip_grad_norm_var = tk.StringVar(value="1.0")
+        ttk.Entry(clip_grad_frame, textvariable=self.clip_grad_norm_var, width=10).pack(side="left")
+        ttk.Label(clip_grad_frame, text="Gradient clipping for training stability (0.1-5.0)").pack(side="left", padx=(10, 0))
+        
+        # Loss update frequency
+        loss_freq_frame = ttk.Frame(advanced_group)
+        loss_freq_frame.pack(fill="x", pady=2)
+        ttk.Label(loss_freq_frame, text="Loss Log Frequency:", width=20).pack(side="left")
+        self.loss_update_frequency_var = tk.StringVar(value="3")
+        ttk.Entry(loss_freq_frame, textvariable=self.loss_update_frequency_var, width=10).pack(side="left")
+        ttk.Label(loss_freq_frame, text="How often to log loss values (steps)").pack(side="left", padx=(10, 0))
+        
         # Precision
         precision_frame = ttk.Frame(advanced_group)
         precision_frame.pack(fill="x", pady=2)
@@ -430,13 +504,14 @@ class AFMTrainerGUI:
         wandb_check.pack(anchor="w", pady=2)
         
         # WandB status
-        self.wandb_status_label = ttk.Label(wandb_group, text="")
+        self.wandb_status_label = ttk.Label(wandb_group, text="WandB status will be checked when enabled")
         self.wandb_status_label.pack(anchor="w", pady=2)
         
-        # Initialize WandB status (deferred to improve startup performance)
+        # Initialize WandB status (completely deferred until WandB tab is accessed)
         self.wandb_status_cache = None
         self.wandb_status_checked = False
-        self._schedule_wandb_status_update()
+        # Don't check WandB status on startup - only when user toggles it
+        # self._schedule_wandb_status_update()
         
     def create_export_tab(self):
         """Create the export configuration tab."""
@@ -611,11 +686,29 @@ class AFMTrainerGUI:
             
             # Validate numeric parameters
             try:
-                int(self.epochs_var.get())
-                float(self.lr_var.get())
-                int(self.batch_size_var.get())
-            except ValueError:
-                raise ValueError("Invalid numeric parameter values")
+                epochs = int(self.epochs_var.get())
+                lr = float(self.lr_var.get())
+                batch_size = int(self.batch_size_var.get())
+                clip_grad_norm = float(self.clip_grad_norm_var.get())
+                loss_update_freq = int(self.loss_update_frequency_var.get())
+                
+                # Validate parameter ranges
+                if epochs <= 0:
+                    raise ValueError("Epochs must be greater than 0")
+                if lr <= 0:
+                    raise ValueError("Learning rate must be greater than 0") 
+                if batch_size <= 0:
+                    raise ValueError("Batch size must be greater than 0")
+                if clip_grad_norm <= 0 or clip_grad_norm > 10:
+                    raise ValueError("Gradient clipping norm must be between 0 and 10")
+                if loss_update_freq <= 0:
+                    raise ValueError("Loss update frequency must be greater than 0")
+                    
+            except ValueError as ve:
+                if "invalid literal" in str(ve):
+                    raise ValueError("Invalid numeric parameter values")
+                else:
+                    raise ve
                 
             self.log_message("✓ Setup validation passed!", "SUCCESS")
             self.status_label.config(text="Setup validated", foreground="green")
@@ -662,6 +755,8 @@ class AFMTrainerGUI:
                 'warmup_epochs': int(self.warmup_var.get()),
                 'gradient_accumulation_steps': int(self.grad_acc_var.get()),
                 'weight_decay': float(self.weight_decay_var.get()),
+                'clip_grad_norm': float(self.clip_grad_norm_var.get()),
+                'loss_update_frequency': int(self.loss_update_frequency_var.get()),
                 'precision': self.precision_var.get(),
                 'activation_checkpointing': self.activation_checkpointing_var.get(),
                 'compile_model': self.compile_model_var.get(),
@@ -708,13 +803,21 @@ class AFMTrainerGUI:
         # Add clear completion separator
         self.log_message("=" * 50, "SUCCESS")
         self.log_message("🎯 TRAINING COMPLETED SUCCESSFULLY!", "SUCCESS")
-        self.log_message("📦 Ready to export adapter - click 'Export Adapter' button", "SUCCESS")
+        
+        # Show appropriate completion message based on draft training
+        if self.train_draft_var.get():
+            self.log_message("✅ Main adapter training completed", "SUCCESS")
+            self.log_message("✅ Draft model training completed", "SUCCESS") 
+            self.log_message("📦 Ready to export adapter with speculative decoding support", "SUCCESS")
+            completion_msg = "Training completed successfully!\n\n✅ Main adapter checkpoints saved\n✅ Draft model checkpoints saved\n🚀 Speculative decoding enabled\n📦 Ready to export .fmadapter file\n\nClick 'Export Adapter' to create your deployment package."
+        else:
+            self.log_message("✅ Adapter training completed", "SUCCESS")
+            self.log_message("📦 Ready to export adapter - click 'Export Adapter' button", "SUCCESS")
+            completion_msg = "Training completed successfully!\n\n✅ Adapter checkpoints saved\n📦 Ready to export .fmadapter file\n\nClick 'Export Adapter' to create your deployment package."
+            
         self.log_message("=" * 50, "SUCCESS")
         
-        messagebox.showinfo(
-            "Training Complete", 
-            "Training completed successfully!\n\n✅ Adapter checkpoints saved\n📦 Ready to export .fmadapter file\n\nClick 'Export Adapter' to create your deployment package."
-        )
+        messagebox.showinfo("Training Complete", completion_msg)
         
     def _training_completed_error(self, error_msg: str = None):
         """Handle training completion with error."""
@@ -830,15 +933,20 @@ class AFMTrainerGUI:
         else:
             log_line = f"[{timestamp}] {prefix} {message}\n"
         
-        self.log_text.insert(tk.END, log_line)
-        self.log_text.see(tk.END)
-        
-        # Ensure the GUI updates
-        self.root.update_idletasks()
+        # Only log to GUI if Monitor tab has been created
+        if hasattr(self, 'log_text') and self.log_text:
+            self.log_text.insert(tk.END, log_line)
+            self.log_text.see(tk.END)
+            # Ensure the GUI updates
+            self.root.update_idletasks()
+        else:
+            # Store messages for later display or just print to console
+            print(log_line.strip())  # Fallback to console logging
         
     def clear_logs(self):
         """Clear the log display."""
-        self.log_text.delete(1.0, tk.END)
+        if hasattr(self, 'log_text') and self.log_text:
+            self.log_text.delete(1.0, tk.END)
         
     def handle_error_message(self, message: str, level: str):
         """
@@ -856,7 +964,8 @@ class AFMTrainerGUI:
             
     def _on_wandb_toggle(self):
         """Handle WandB checkbox toggle."""
-        self._update_wandb_status()
+        # Only check WandB status when user actually toggles it
+        self._schedule_wandb_status_update()
         
     def _schedule_wandb_status_update(self):
         """Schedule WandB status update to run after UI is ready."""
@@ -880,7 +989,8 @@ class AFMTrainerGUI:
     def _check_wandb_status_background(self):
         """Check WandB status in background without blocking UI."""
         try:
-            if not self.wandb_integration.is_available():
+            wandb_integration = self._get_wandb_integration()
+            if not wandb_integration.is_available():
                 self.wandb_status_cache = {
                     'available': False,
                     'text': "WandB not installed. Install with: pip install wandb",
@@ -985,7 +1095,7 @@ class AFMTrainerGUI:
             self.log_message("🔄 Cleaning up resources...", "INFO")
             
             # Stop WandB if active
-            if hasattr(self, 'wandb_integration') and self.wandb_integration:
+            if self.wandb_integration is not None:
                 try:
                     self.wandb_integration.finish()
                 except Exception as e:

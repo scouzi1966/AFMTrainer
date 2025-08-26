@@ -15,7 +15,8 @@ import logging
 import queue
 import signal
 
-from .wandb_integration import WandBIntegration
+# Defer WandB import to avoid startup penalty
+# from .wandb_integration import WandBIntegration
 from .error_handler import get_error_handler
 
 
@@ -28,8 +29,24 @@ class TrainingController:
         self.training_thread: Optional[threading.Thread] = None
         self.stop_event = threading.Event()
         self.output_queue = queue.Queue()
-        self.wandb_integration = WandBIntegration()
+        self.wandb_integration = None  # Lazy load when needed
         self.error_handler = get_error_handler()
+        
+    def _get_wandb_integration(self):
+        """Lazy load WandB integration to avoid startup penalty."""
+        if self.wandb_integration is None:
+            try:
+                from .wandb_integration import WandBIntegration
+                self.wandb_integration = WandBIntegration()
+            except ImportError as e:
+                print(f"Warning: Could not import WandB integration: {e}")
+                # Create a dummy WandB integration
+                self.wandb_integration = type('DummyWandB', (), {
+                    'is_available': lambda: False,
+                    'setup_logging': lambda *args, **kwargs: None,
+                    'finish': lambda: None
+                })()
+        return self.wandb_integration
         
     def run_training(
         self, 
@@ -70,17 +87,33 @@ class TrainingController:
             )
             
             # Monitor training output
+            # Check if draft model training is enabled
+            train_draft = config.get('train_draft', False)
+            
+            # Adjust progress scaling based on whether draft training is enabled
+            def main_progress_callback(progress, message):
+                if train_draft:
+                    # Main training is only 50% of total when draft is enabled
+                    progress_callback(progress * 0.5, message)
+                else:
+                    progress_callback(progress, message)
+            
             success = self._monitor_training_output(
                 self.process, 
-                progress_callback, 
+                main_progress_callback, 
                 log_callback,
                 config
             )
             
             # Train draft model if requested
-            if success and config.get('train_draft', False):
+            if success and train_draft:
                 log_callback("Starting draft model training...")
-                draft_success = self._train_draft_model(config, progress_callback, log_callback)
+                
+                def draft_progress_callback(progress, message):
+                    # Draft training is the second 50% of total progress
+                    progress_callback(0.5 + (progress * 0.5), f"Draft: {message}")
+                    
+                draft_success = self._train_draft_model(config, draft_progress_callback, log_callback)
                 success = success and draft_success
             
             return success
@@ -310,7 +343,9 @@ class TrainingController:
                 cwd=config['toolkit_dir']
             )
             
-            # Monitor draft training
+            # Monitor draft training with progress tracking
+            progress_callback(0.0, "Draft training starting...")
+            
             for line in iter(draft_process.stdout.readline, ''):
                 if self.stop_event.is_set():
                     draft_process.terminate()
@@ -320,9 +355,18 @@ class TrainingController:
                 if line:
                     log_callback(f"[Draft] {line}")
                     
+                    # Extract progress from draft training output
+                    epoch_match = re.search(r'Epoch (\d+)/(\d+)', line)
+                    if epoch_match:
+                        current = int(epoch_match.group(1))
+                        total = int(epoch_match.group(2))
+                        progress = (current - 1) / total if total > 0 else 0.0
+                        progress_callback(progress, f"Draft: Epoch {current}/{total}")
+                    
             return_code = draft_process.wait()
             
             if return_code == 0:
+                progress_callback(1.0, "Draft training completed successfully")
                 log_callback("Draft model training completed successfully")
                 return True
             else:
