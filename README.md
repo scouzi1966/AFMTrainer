@@ -23,7 +23,8 @@ Ensure you have sufficient free disk space before installation. You can clean up
 
 ## 🌟 Features
 
-- **🎯 Intuitive GUI**: Easy-to-use tabbed interface for all training configurations
+- **🎯 Modern GUI**: Beautiful, professional interface with dark/light theme switching
+- **🎨 Enhanced Theming**: Modern Sun Valley theme for a polished, forest-inspired appearance
 - **📊 Real-time Monitoring**: Live training progress with loss visualization and log streaming
 - **🔄 Complete Workflow**: From dataset validation to .fmadapter export
 - **⚙️ Flexible Configuration**: All Apple toolkit parameters exposed with sensible defaults
@@ -33,6 +34,7 @@ Ensure you have sufficient free disk space before installation. You can clean up
 - **📁 Smart File Management**: Automatic .gitignore updates and dataset validation
 - **🚀 Draft Model Training**: Optional speculative decoding support
 - **💾 Configuration Profiles**: Save and load training configurations
+- **🌓 Theme Customization**: Real-time switching between dark and light themes
 
 ## 📋 Requirements
 
@@ -83,7 +85,31 @@ The launcher will automatically:
 - Install UV if missing
 - Set up the environment
 - Detect the Apple toolkit
-- Launch the GUI
+- Launch the GUI with modern theming
+
+## 🎨 Visual Experience
+
+AFM Trainer features a modern, professional interface with:
+
+### 🌓 **Theme Options**
+- **Dark Theme** (default): Professional dark interface inspired by modern development tools
+- **Light Theme**: Clean, bright interface for different preferences
+- **Real-time Switching**: Toggle between themes instantly from the header
+
+### ✨ **Visual Enhancements**
+- **Modern Styling**: Sun Valley theme providing a forest-inspired, Excel-like appearance
+- **Professional Typography**: Enhanced fonts and spacing for better readability
+- **Icon Integration**: Meaningful icons throughout the interface for improved navigation
+- **Visual Hierarchy**: Clear organization with styled sections and grouped controls
+- **Enhanced Controls**: Modern buttons, entries, and interactive elements
+
+### 🎯 **User Experience**
+- **Intuitive Layout**: Logical flow from setup to training to export
+- **Visual Feedback**: Clear status indicators and progress visualization
+- **Accessibility**: High contrast and readable typography in both themes
+- **Consistency**: Unified styling across all interface elements
+
+**Try the Theme Demo**: Run `uv run python theme_demo.py` to see the visual improvements!
 
 ## 📖 User Guide
 
