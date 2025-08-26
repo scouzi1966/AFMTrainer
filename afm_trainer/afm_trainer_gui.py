@@ -259,7 +259,7 @@ class AFMTrainerGUI:
         info_frame.pack(anchor="w", fill="x")
         
         version_label = ttk.Label(info_frame,
-                                 text="v0.1.0 • Modern GUI for LoRA Adapter Training",
+                                 text="v0.2.0 • Modern GUI for LoRA Adapter Training",
                                  font=("Arial", 9))
         version_label.pack(side="left")
         
