@@ -62,17 +62,48 @@ def install_dependencies():
     try:
         # Install GUI wrapper dependencies (from pyproject.toml)
         print("  Installing AFM Trainer GUI dependencies...")
-        result = subprocess.run(['uv', 'sync'], cwd=Path(__file__).parent, check=True)
+        subprocess.run(['uv', 'sync'], cwd=Path(__file__).parent, check=True)
         print("  ✓ GUI dependencies installed")
         
-        # Install Apple toolkit dependencies (from requirements-toolkit.txt)  
+        # Install Apple toolkit dependencies
         print("  Installing Apple toolkit dependencies...")
-        result = subprocess.run([
-            'uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'
-        ], cwd=Path(__file__).parent, check=True)
-        print("  ✓ Toolkit dependencies installed")
+        if sys.platform == 'darwin':
+            # macOS: Install default PyTorch (for Metal) and other dependencies from the file
+            print("    Detected macOS. Installing PyTorch for Metal...")
+            
+            with open('requirements-toolkit.txt', 'r') as f:
+                lines = f.readlines()
+            
+            # Filter out CUDA-specific torch and the index URL
+            non_torch_reqs = [
+                line.strip() for line in lines 
+                if 'torch' not in line and 'extra-index-url' not in line and line.strip() and not line.strip().startswith('#')
+            ]
+            
+            # Install other packages
+            if non_torch_reqs:
+                subprocess.run(
+                    ['uv', 'pip', 'install'] + non_torch_reqs,
+                    cwd=Path(__file__).parent, check=True
+                )
+
+            # Install default PyTorch for Metal support
+            subprocess.run(
+                ['uv', 'pip', 'install', 'torch', 'torchvision', 'torchaudio'],
+                cwd=Path(__file__).parent, check=True
+            )
+            print("    ✓ PyTorch for Metal installed.")
+        else:
+            # Linux/Windows: Install from requirements-toolkit.txt (CUDA)
+            print("    Detected Linux/Windows. Installing PyTorch for CUDA from requirements-toolkit.txt...")
+            subprocess.run(
+                ['uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'],
+                cwd=Path(__file__).parent, check=True
+            )
         
+        print("  ✓ Toolkit dependencies installed")
         return True
+        
     except subprocess.CalledProcessError as e:
         print(f"  ✗ Failed to install dependencies: {e}")
         print("  Check your internet connection and requirements files")
@@ -81,6 +112,7 @@ def install_dependencies():
         print("  ✗ Requirements file not found")
         print("  Make sure you're running from the AFMTrainer directory")
         return False
+
 
 
 def main():
@@ -154,7 +186,7 @@ def main():
             
             # Find a working Python with tkinter (prioritize conda/system Python)
             working_python = None
-            for python_path in ['/home/syl/miniconda3/envs/311_gpu/bin/python3.11', '/usr/bin/python3', 'python3']:
+            for python_path in ['/usr/bin/python3', 'python3']:
                 try:
                     test_result = subprocess.run([python_path, '-c', 'import tkinter'], 
                                                capture_output=True, timeout=5)
