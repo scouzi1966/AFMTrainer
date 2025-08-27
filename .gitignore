@@ -180,3 +180,11 @@ output/
 build/
 dist/
 *.egg-info/
+
+# Test and debug scripts (not part of package)
+test_*.py
+theme_demo.py
+*_test.py
+debug_*.py
+xcb_*.sh
+uv_launcher.py

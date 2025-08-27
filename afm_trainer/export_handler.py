@@ -215,13 +215,18 @@ class ExportHandler:
         Returns:
             List of command arguments
         """
-        cmd = [
-            sys.executable, "-m", "export.export_fmadapter",
+        # Use UV if available, otherwise fall back to current Python
+        if os.environ.get('VIRTUAL_ENV') or 'uv' in sys.executable.lower():
+            cmd = ["uv", "run", "python", "-m", "export.export_fmadapter"]
+        else:
+            cmd = [sys.executable, "-m", "export.export_fmadapter"]
+        
+        cmd.extend([
             "--output-dir", str(config['output_dir']),
             "--adapter-name", config['adapter_name'],
             "--checkpoint", str(adapter_checkpoint),
             "--author", config.get('author', '3P developer')
-        ]
+        ])
         
         # Add description if provided
         description = config.get('description', '').strip()
@@ -263,14 +268,19 @@ class ExportHandler:
                 raise Exception("Could not find toolkit directory")
                 
             # Build asset pack creation command
-            asset_cmd = [
-                sys.executable, "-m", "export.produce_asset_pack",
+            # Use UV if available, otherwise fall back to current Python
+            if os.environ.get('VIRTUAL_ENV') or 'uv' in sys.executable.lower():
+                asset_cmd = ["uv", "run", "python", "-m", "export.produce_asset_pack"]
+            else:
+                asset_cmd = [sys.executable, "-m", "export.produce_asset_pack"]
+                
+            asset_cmd.extend([
                 "--fmadapter-path", fmadapter_path,
                 "--output-path", output_path,
                 "--platforms", "iOS,macOS",
                 "--download-policy", "PREFETCH",
                 "--installation-event-type", "FIRST_INSTALLTION"
-            ]
+            ])
             
             self.logger.info(f"Asset pack command: {' '.join(asset_cmd)}")
             

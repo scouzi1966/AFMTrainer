@@ -154,8 +154,13 @@ class TrainingController:
         Returns:
             List of command arguments
         """
-        cmd = [
-            sys.executable, "-m", "examples.train_adapter",
+        # Use UV if available, otherwise fall back to current Python
+        if os.environ.get('VIRTUAL_ENV') or 'uv' in sys.executable.lower():
+            cmd = ["uv", "run", "python", "-m", "examples.train_adapter"]
+        else:
+            cmd = [sys.executable, "-m", "examples.train_adapter"]
+        
+        cmd.extend([
             "--train-data", config['train_data'],
             "--epochs", str(config['epochs']),
             "--learning-rate", str(config['learning_rate']),
@@ -168,7 +173,7 @@ class TrainingController:
             "--loss-update-frequency", str(config.get('loss_update_frequency', 3)),
             "--checkpoint-dir", config['output_dir'],
             "--checkpoint-frequency", "1"
-        ]
+        ])
         
         # Add evaluation data if provided
         if config.get('eval_data'):

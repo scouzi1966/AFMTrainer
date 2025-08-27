@@ -1,0 +1,26 @@
+# Apple Foundation Models Adapter Training Toolkit Dependencies
+# These are required for training and exporting adapters
+
+# PyTorch with CUDA support - use extra index for CUDA builds
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+torchaudio==2.5.1+cu121
+
+# Apple's TAMM library for foundation model training
+tamm>=0.1.0,<0.3.0
+
+# CoreML tools for .fmadapter export
+coremltools==8.3.0
+
+# Text processing
+sentencepiece
+
+# Additional ML dependencies
+huggingface-hub
+safetensors
+tokenizers
+
+# Optimization and training utilities  
+accelerate
+peft

@@ -55,6 +55,34 @@ def check_toolkit_directory():
     return None
 
 
+def install_dependencies():
+    """Install all dependencies using UV."""
+    print("\n📦 Installing dependencies with UV...")
+    
+    try:
+        # Install GUI wrapper dependencies (from pyproject.toml)
+        print("  Installing AFM Trainer GUI dependencies...")
+        result = subprocess.run(['uv', 'sync'], cwd=Path(__file__).parent, check=True)
+        print("  ✓ GUI dependencies installed")
+        
+        # Install Apple toolkit dependencies (from requirements-toolkit.txt)  
+        print("  Installing Apple toolkit dependencies...")
+        result = subprocess.run([
+            'uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'
+        ], cwd=Path(__file__).parent, check=True)
+        print("  ✓ Toolkit dependencies installed")
+        
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Failed to install dependencies: {e}")
+        print("  Check your internet connection and requirements files")
+        return False
+    except FileNotFoundError:
+        print("  ✗ Requirements file not found")
+        print("  Make sure you're running from the AFMTrainer directory")
+        return False
+
+
 def main():
     """Main launcher function."""
     print("🚀 AFM Trainer Launcher")
@@ -83,6 +111,12 @@ def main():
     
     print("✓ UV package manager available")
     
+    # Install all dependencies using UV
+    if not install_dependencies():
+        print("\n✗ Dependency installation failed")
+        print("Check your internet connection and try again.")
+        sys.exit(1)
+    
     # Check for toolkit directory
     toolkit_dir = check_toolkit_directory()
     if not toolkit_dir:
@@ -97,13 +131,54 @@ def main():
     else:
         print(f"✓ Apple toolkit found: {toolkit_dir.name}")
     
-    # Run the application
+    # Run the application using UV-managed environment
     print("\n🎯 Starting AFM Trainer...")
     try:
-        # Use UV to run the application
-        result = subprocess.run([
-            'uv', 'run', 'python', '-m', 'afm_trainer.afm_trainer_gui'
-        ], cwd=Path(__file__).parent)
+        # Set up environment for Linux X11 compatibility
+        env = os.environ.copy()
+        if sys.platform.startswith('linux'):
+            env.update({
+                'QT_X11_NO_MITSHM': '1',
+                'XLIB_SKIP_ARGB_VISUALS': '1',
+                'XDG_SESSION_TYPE': 'x11',
+                'AFM_TRAINER_LINUX_MODE': '1',
+                'PYTHONUNBUFFERED': '1'
+            })
+        
+        # Use UV to run the application with all dependencies managed
+        if sys.platform.startswith('linux'):
+            print("🛡️  Using Linux X11 safe mode...")
+            # On Linux, use system Python with UV packages in PYTHONPATH to avoid X11 issues
+            uv_site_packages = Path(__file__).parent / ".venv" / "lib" / "python3.11" / "site-packages"
+            env['PYTHONPATH'] = f"{uv_site_packages}:{Path(__file__).parent}:{env.get('PYTHONPATH', '')}"
+            
+            # Find a working Python with tkinter (prioritize conda/system Python)
+            working_python = None
+            for python_path in ['/home/syl/miniconda3/envs/311_gpu/bin/python3.11', '/usr/bin/python3', 'python3']:
+                try:
+                    test_result = subprocess.run([python_path, '-c', 'import tkinter'], 
+                                               capture_output=True, timeout=5)
+                    if test_result.returncode == 0:
+                        working_python = python_path
+                        break
+                except:
+                    continue
+            
+            if working_python:
+                print(f"✓ Using working Python: {working_python}")
+                result = subprocess.run([
+                    working_python, 'linux_uv_safe.py'
+                ], cwd=Path(__file__).parent, env=env)
+            else:
+                print("⚠ Falling back to UV Python (may have X11 issues)")
+                result = subprocess.run([
+                    'bash', '-c', 
+                    'uv run python linux_uv_safe.py 2>&1 | grep -v "\\[xcb\\]" | grep -v "python3: .*xcb"'
+                ], cwd=Path(__file__).parent, env=env, shell=False)
+        else:
+            result = subprocess.run([
+                'uv', 'run', 'python', '-m', 'afm_trainer.afm_trainer_gui'
+            ], cwd=Path(__file__).parent, env=env)
         
         sys.exit(result.returncode)
         

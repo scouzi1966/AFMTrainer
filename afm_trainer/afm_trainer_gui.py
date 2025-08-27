@@ -3,12 +3,33 @@
 AFM Trainer GUI - Main application interface for Apple Foundation Models Adapter Training.
 """
 
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
-import threading
 import os
 import sys
 from pathlib import Path
+
+# Fix X11 threading issues on Linux BEFORE importing tkinter or threading
+if sys.platform.startswith('linux'):
+    # Set environment variables to prevent X11 threading issues
+    os.environ.setdefault('QT_X11_NO_MITSHM', '1')
+    os.environ.setdefault('XDG_SESSION_TYPE', 'x11')
+    os.environ.setdefault('XLIB_SKIP_ARGB_VISUALS', '1')
+    
+    try:
+        # Initialize X11 threading support before any GUI imports
+        import ctypes
+        import ctypes.util
+        
+        x11_lib = ctypes.util.find_library('X11')
+        if x11_lib:
+            x11 = ctypes.cdll.LoadLibrary(x11_lib)
+            x11.XInitThreads()
+    except Exception:
+        # If X11 threading setup fails, continue anyway
+        pass
+
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox, scrolledtext
+import threading
 from typing import Optional
 import logging
 import datetime
