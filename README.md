@@ -2,6 +2,13 @@
 
 NOTE TO USERS: The WanDB intergration remains untested until I get a chance. Apologies for the inconvenience.
 
+Requires Python 3.11+
+
+
+## On MacOS: $$\color{blue}{python \space run.py}$$ (all packages will be downloaded automatically with uv and will use Pytoch with Metal)
+
+## On Linux (Ubuntu tested): $$\color{blue}{python\space run-linux.py}$$ (all packages will be downloaded automatically with uv and will use Pytoch with CUDA)
+
 A comprehensive GUI wrapper application for Apple's Foundation Models Adapter Training Toolkit, providing an intuitive interface for training LoRA adapters for Apple's on-device foundation models.
 
 ![AFM Trainer](https://img.shields.io/badge/Python-3.11+-blue.svg)
