@@ -66,12 +66,20 @@ def install_uv():
     """Install UV package manager."""
     print("UV not found. Installing UV...")
     try:
-        subprocess.run(['curl', '-LsSf', 'https://astral.sh/uv/install.sh', '|', 'sh'], 
-                      shell=True, check=True)
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_script:
+            subprocess.run(['curl', '-LsSf', 'https://astral.sh/uv/install.sh'], stdout=tmp_script, check=True)
+            tmp_script_path = tmp_script.name
+        subprocess.run(['sh', tmp_script_path], check=True)
+        os.remove(tmp_script_path)
         print("✓ UV installed successfully!")
         return True
     except subprocess.CalledProcessError as e:
         print(f"✗ Failed to install UV: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error during UV installation: {e}")
         return False
 
 

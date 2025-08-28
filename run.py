@@ -29,11 +29,20 @@ def install_uv():
             subprocess.run(['powershell', '-c', 'irm https://astral.sh/uv/install.ps1 | iex'], check=True)
         else:
             # macOS/Linux
-            subprocess.run(['curl', '-LsSf', 'https://astral.sh/uv/install.sh', '|', 'sh'], shell=True, check=True)
+            import tempfile
+            import os
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_script:
+                subprocess.run(['curl', '-LsSf', 'https://astral.sh/uv/install.sh'], stdout=tmp_script, check=True)
+                tmp_script_path = tmp_script.name
+            subprocess.run(['sh', tmp_script_path], check=True)
+            os.remove(tmp_script_path)
         print("✓ UV installed successfully!")
         return True
     except subprocess.CalledProcessError as e:
         print(f"✗ Failed to install UV: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error during UV installation: {e}")
         return False
 
 
@@ -203,10 +212,26 @@ def main():
                 ], cwd=Path(__file__).parent, env=env)
             else:
                 print("⚠ Falling back to UV Python (may have X11 issues)")
-                result = subprocess.run([
-                    'bash', '-c', 
-                    'uv run python linux_uv_safe.py 2>&1 | grep -v "\\[xcb\\]" | grep -v "python3: .*xcb"'
-                ], cwd=Path(__file__).parent, env=env, shell=False)
+                result = subprocess.run(
+                    ['uv', 'run', 'python', 'linux_uv_safe.py'],
+                    cwd=Path(__file__).parent,
+                    env=env,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True
+                )
+                # Filter out known X11 error messages, but keep all other output
+                filtered_lines = []
+                x11_error_patterns = [
+                    "[xcb]",
+                    "python3:.*xcb"
+                ]
+                import re
+                for line in result.stdout.splitlines():
+                    if any(re.search(pattern, line) for pattern in x11_error_patterns):
+                        continue
+                    filtered_lines.append(line)
+                print("\n".join(filtered_lines))
         else:
             result = subprocess.run([
                 'uv', 'run', 'python', '-m', 'afm_trainer.afm_trainer_gui'
