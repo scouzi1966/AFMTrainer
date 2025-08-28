@@ -1,5 +1,7 @@
 # AFM Trainer
 
+NOTE TO USERS: The WanDB intergration remains untested until I get a chance. Apologies for the inconvenience.
+
 A comprehensive GUI wrapper application for Apple's Foundation Models Adapter Training Toolkit, providing an intuitive interface for training LoRA adapters for Apple's on-device foundation models.
 
 ![AFM Trainer](https://img.shields.io/badge/Python-3.11+-blue.svg)
