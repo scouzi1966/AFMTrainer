@@ -71,6 +71,9 @@ cd AFMTrainer
 
 ```bash
 # Simple launcher (recommended)
+# For Linux users, it is recommended to use the dedicated Linux launcher:
+# python run-linux.py
+# For macOS, use the universal launcher:
 python run.py
 
 # Or use UV directly
