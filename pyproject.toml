@@ -13,13 +13,22 @@ dependencies = [
     "sv-ttk>=2.6.0",
     "matplotlib>=3.7.0",
     "tqdm",
-    
     # Core data processing
     "pydantic",
     "notebook",
-    
     # Monitoring and logging
     "wandb>=0.16.0",
+    "torch>=2.8.0",
+    "torchvision>=0.23.0",
+    "torchaudio>=2.8.0",
+    "tamm>=0.1.0,<0.3.0",
+    "coremltools==8.3.0",
+    "sentencepiece>=0.2.1",
+    "huggingface-hub>=0.34.4",
+    "safetensors>=0.6.2",
+    "tokenizers>=0.21.4",
+    "accelerate>=1.10.1",
+    "peft>=0.17.1",
 ]
 
 [project.optional-dependencies]
@@ -39,3 +48,6 @@ target-version = ['py311']
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[[tool.uv.index]]
+url = "file:///Volumes/Crucial4TB/dev/git/AFMTrainer/pytorch-mps"

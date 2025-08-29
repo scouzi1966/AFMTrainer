@@ -75,7 +75,7 @@ def install_dependencies():
         if Path('requirements-toolkit.txt').exists():
             print("  Installing Apple toolkit dependencies...")
             subprocess.run([
-                'uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'
+                'uv', 'add', '-r', 'requirements-toolkit.txt'
             ], cwd=Path(__file__).parent, check=True,
                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             print("  ✓ Toolkit dependencies installed")
