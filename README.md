@@ -4,7 +4,7 @@ NOTE TO USERS: The WanDB intergration remains untested until I get a chance. Apo
 
 Requires Python 3.11+
 
-The LoRA adapter can be used and tested on MacOS Beta 26+ with the afm command: afm -a output/my_adapter.fmadapter
+The LoRA adapter can be used and tested on MacOS Beta 26+ with the afm command: afm -a output/my_adapter.fmadapter -s "Write a story about Einstein'
 
 Get afm here: https://github.com/scouzi1966/maclocal-api
 
