@@ -4,6 +4,10 @@ NOTE TO USERS: The WanDB intergration remains untested until I get a chance. Apo
 
 Requires Python 3.11+
 
+The adapater can be used and testes on MacOS Beta 26+ with the afm command: afm -a output/my_adapter.fmadapter
+
+Get afm here: https://github.com/scouzi1966/maclocal-api
+
 
 ## On MacOS: $$\color{blue}{python \space run.py}$$ (all packages will be downloaded automatically with uv and will use Pytoch with Metal)
 
