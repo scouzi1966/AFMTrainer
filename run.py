@@ -83,13 +83,14 @@ def install_dependencies():
             # Install other packages
             if non_torch_reqs:
                 subprocess.run(
-                    ['uv', 'pip', 'install'] + non_torch_reqs,
+                    ['uv', 'add'] + non_torch_reqs,
                     cwd=Path(__file__).parent, check=True
                 )
 
             # Install default PyTorch for Metal support
             subprocess.run(
-                ['uv', 'pip', 'install', 'torch', 'torchvision', 'torchaudio'],
+             #   ['uv', 'pip', 'install', 'torch', 'torchvision', 'torchaudio'],
+                 ['uv', 'add', 'torch',  'torchvision', '--index', 'pytorch-mps'],
                 cwd=Path(__file__).parent, check=True
             )
             print("    ✓ PyTorch for Metal installed.")
@@ -97,7 +98,7 @@ def install_dependencies():
             # Linux/Windows: Install from requirements-toolkit.txt (CUDA)
             print("    Detected Linux/Windows. Installing PyTorch for CUDA from requirements-toolkit.txt...")
             subprocess.run(
-                ['uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'],
+                ['uv', 'add', '-r', 'requirements-toolkit.txt'],
                 cwd=Path(__file__).parent, check=True
             )
         

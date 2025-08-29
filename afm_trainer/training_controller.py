@@ -83,7 +83,7 @@ class TrainingController:
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 bufsize=1,
-                cwd=config['toolkit_dir']
+                cwd=Path.cwd()  # Run from AFM Trainer directory
             )
             
             # Monitor training output
@@ -154,11 +154,21 @@ class TrainingController:
         Returns:
             List of command arguments
         """
-        # Use UV if available, otherwise fall back to current Python
-        if os.environ.get('VIRTUAL_ENV') or 'uv' in sys.executable.lower():
-            cmd = ["uv", "run", "python", "-m", "examples.train_adapter"]
-        else:
-            cmd = [sys.executable, "-m", "examples.train_adapter"]
+        # Always use UV for training commands since AFM Trainer is UV-managed
+        # Set PYTHONPATH to include toolkit directory
+        toolkit_dir = config['toolkit_dir']
+        cmd = ["uv", "run", "python", "-c", f"""
+import os
+import sys
+import subprocess
+
+# Set up environment
+os.environ['PYTHONPATH'] = r'{toolkit_dir}' + os.pathsep + os.environ.get('PYTHONPATH', '')
+os.chdir(r'{toolkit_dir}')
+
+# Run the training script
+subprocess.run([sys.executable, '-m', 'examples.train_adapter'] + sys.argv[1:])
+"""]
         
         cmd.extend([
             "--train-data", config['train_data'],
@@ -321,9 +331,19 @@ class TrainingController:
             log_callback(f"Using adapter checkpoint: {latest_checkpoint}")
             
             # Build draft training command
-            draft_cmd = [
-                sys.executable, "-m", "examples.train_draft_model",
-                "--checkpoint", str(latest_checkpoint),
+            toolkit_dir = config['toolkit_dir']
+            draft_cmd = ["uv", "run", "python", "-c", f"""
+import os
+import sys
+import subprocess
+
+# Set up environment
+os.environ['PYTHONPATH'] = r'{toolkit_dir}' + os.pathsep + os.environ.get('PYTHONPATH', '')
+os.chdir(r'{toolkit_dir}')
+
+# Run the draft training script
+subprocess.run([sys.executable, '-m', 'examples.train_draft_model'] + sys.argv[1:])
+""", "--checkpoint", str(latest_checkpoint),
                 "--train-data", config['train_data'],
                 "--epochs", str(config['epochs']),
                 "--learning-rate", str(config['learning_rate']),
@@ -345,7 +365,7 @@ class TrainingController:
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 bufsize=1,
-                cwd=config['toolkit_dir']
+                cwd=Path.cwd()
             )
             
             # Monitor draft training with progress tracking

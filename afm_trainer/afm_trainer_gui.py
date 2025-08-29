@@ -37,7 +37,11 @@ import datetime
 # Import sv-ttk for modern theming
 try:
     import sv_ttk
-    SV_TTK_AVAILABLE = True
+    # Disable sv-ttk on Linux to prevent hanging issues
+    if sys.platform.startswith('linux'):
+        SV_TTK_AVAILABLE = False
+    else:
+        SV_TTK_AVAILABLE = True
 except ImportError:
     SV_TTK_AVAILABLE = False
 
@@ -1389,13 +1393,18 @@ def main():
     app = AFMTrainerGUI(root)
     
     try:
-        # Set window to center of screen
-        root.update_idletasks()
-        width = root.winfo_width()
-        height = root.winfo_height()
-        x = (root.winfo_screenwidth() // 2) - (width // 2)
-        y = (root.winfo_screenheight() // 2) - (height // 2)
-        root.geometry(f"{width}x{height}+{x}+{y}")
+        # Set window to center of screen (with Linux-safe fallback)
+        try:
+            root.update_idletasks()
+            width = root.winfo_width()
+            height = root.winfo_height()
+            x = (root.winfo_screenwidth() // 2) - (width // 2)
+            y = (root.winfo_screenheight() // 2) - (height // 2)
+            root.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception as e:
+            # Fallback for Linux X11 issues - just use default positioning
+            print(f"Warning: Could not center window: {e}")
+            root.geometry("900x700")
         
         root.mainloop()
         

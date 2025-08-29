@@ -67,28 +67,35 @@ def install_dependencies():
     try:
         # Install GUI wrapper dependencies (from pyproject.toml)
         print("  Installing AFM Trainer GUI dependencies...")
-        subprocess.run(['uv', 'sync'], cwd=Path(__file__).parent, check=True, 
-                      stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        print("  ✓ GUI dependencies installed")
+        print("    This may take several minutes to download CUDA libraries...")
+        result = subprocess.run(['uv', 'sync'], cwd=Path(__file__).parent, check=False)
+        if result.returncode == 0:
+            print("  ✓ GUI dependencies installed")
+        else:
+            print(f"  ⚠ GUI dependencies installation had issues (exit code: {result.returncode})")
+            print("    Continuing anyway - some features may not work")
         
         # Install Apple toolkit dependencies (from requirements-toolkit.txt)
         if Path('requirements-toolkit.txt').exists():
             print("  Installing Apple toolkit dependencies...")
-            subprocess.run([
-                'uv', 'pip', 'install', '-r', 'requirements-toolkit.txt'
-            ], cwd=Path(__file__).parent, check=True,
-               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            print("  ✓ Toolkit dependencies installed")
+            try:
+                result = subprocess.run([
+                    'uv', 'add', '-r', 'requirements-toolkit.txt'
+                ], cwd=Path(__file__).parent, check=False)
+                if result.returncode == 0:
+                    print("  ✓ Toolkit dependencies installed")
+                else:
+                    print("  ⚠ Some toolkit dependencies unavailable (requires Apple toolkit)")
+                    print("    GUI will run but training may require additional setup")
+            except Exception as e:
+                print(f"  ⚠ Error installing toolkit dependencies: {e}")
+                print("    GUI will run but training may require additional setup")
         
         return True
-    except subprocess.CalledProcessError as e:
-        print(f"  ✗ Failed to install dependencies: {e}")
-        print("  Check your internet connection and requirements files")
-        return False
-    except FileNotFoundError:
-        print("  ✗ Requirements file not found")
-        print("  Make sure you're running from the AFMTrainer directory")
-        return False
+    except Exception as e:
+        print(f"  ⚠ Dependency installation error: {e}")
+        print("  Continuing anyway - some features may not work")
+        return True  # Continue even if dependencies fail
 
 
 def check_tkinter_support():
@@ -254,44 +261,40 @@ def main():
     
     try:
         if system_name == "Linux":
-            # Try to use a working system Python to avoid X11 issues
-            working_python = find_working_python_linux()
+            # On Linux, run directly in the same process to avoid subprocess X11 issues
+            print("🛡️  Running in Linux X11 safe mode (direct execution)...")
             
-            if working_python and working_python != 'uv':
-                print(f"✓ Using working Python: {working_python}")
-                print("🛡️  Using Linux X11 safe mode...")
-                
-                # Set up Python path to include UV packages
-                uv_site_packages = Path(__file__).parent / ".venv" / "lib" / "python3.11" / "site-packages"
-                if uv_site_packages.exists():
-                    env['PYTHONPATH'] = f"{uv_site_packages}:{Path(__file__).parent}:{env.get('PYTHONPATH', '')}"
-                
-                result = subprocess.run([
-                    working_python, '-c', '''
-import sys
-sys.path.insert(0, ".")
-try:
-    from afm_trainer.afm_trainer_gui import main
-    main()
-except Exception as e:
-    print(f"Error: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-'''
-                ], cwd=Path(__file__).parent, env=env)
-            else:
-                print("Starting with UV-managed environment...")
-                result = subprocess.run([
-                    'uv', 'run', 'python', '-m', 'afm_trainer.afm_trainer_gui'
-                ], cwd=Path(__file__).parent, env=env)
+            # Set up environment variables for the current process
+            for key, value in env.items():
+                if key not in os.environ:  # Don't override existing vars
+                    os.environ[key] = value
+            
+            # Set up Python path to include UV packages
+            uv_site_packages = Path(__file__).parent / ".venv" / "lib" / "python3.11" / "site-packages"
+            if uv_site_packages.exists():
+                if 'PYTHONPATH' in os.environ:
+                    os.environ['PYTHONPATH'] = f"{uv_site_packages}:{Path(__file__).parent}:{os.environ['PYTHONPATH']}"
+                else:
+                    os.environ['PYTHONPATH'] = f"{uv_site_packages}:{Path(__file__).parent}"
+            
+            # Add current directory to Python path
+            sys.path.insert(0, str(Path(__file__).parent))
+            
+            # Import and run directly
+            try:
+                from afm_trainer.afm_trainer_gui import main
+                main()
+            except Exception as e:
+                print(f"Error: {e}")
+                import traceback
+                traceback.print_exc()
+                sys.exit(1)
         else:
-            # macOS and Windows
+            # macOS and Windows - use UV subprocess
             result = subprocess.run([
                 'uv', 'run', 'python', '-m', 'afm_trainer.afm_trainer_gui'
             ], cwd=Path(__file__).parent, env=env)
-        
-        sys.exit(result.returncode)
+            sys.exit(result.returncode)
         
     except KeyboardInterrupt:
         print("\n👋 AFM Trainer stopped by user")
