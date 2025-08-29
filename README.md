@@ -9,6 +9,8 @@ Requires Python 3.11+
 
 ## On Linux (Ubuntu tested): $$\color{blue}{python\space run-linux.py}$$ (all packages will be downloaded automatically with uv and will use Pytoch with CUDA)
 
+Note: On Linux, the CUDA python packages will be downlaoded as part of the virtual environment and can take a lot of time depending on your bandwidth. I suggest not cleaning up your environemnt after every quit to save time. Clean it up when you done or on your last run when you quit.
+
 A comprehensive GUI wrapper application for Apple's Foundation Models Adapter Training Toolkit, providing an intuitive interface for training LoRA adapters for Apple's on-device foundation models.
 
 ![AFM Trainer](https://img.shields.io/badge/Python-3.11+-blue.svg)
